@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "internet-number-resource"
+version = "0.1.0"
+description = ""
+authors = ["Justin Jeffery <justin.jeffery@ipfabric.io>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.7.1"
+pytricia = "^1.0.2"
+ipfabric = "^0.9.0"
+pydantic = "^1.9.0"
+whoisit = "^2.5.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -7,6 +7,7 @@ import pytricia
 import whoisit
 from collections import defaultdict
 from pydantic import BaseModel
+import pandas as pd
 
 whoisit.bootstrap()
 
@@ -76,25 +77,61 @@ class IPFNets:
         networks, top_level = dict(), list()
         nets = defaultdict(list)
         for net in self.networks.keys():
-            if not self.networks.parent(net) and net in self.rir:
-                nets[self.rir.get(net)[0]].append(net)
-                top_level.append(net)
+            if not self.networks.parent(net):
+                if net in self.rir:
+                    nets[self.rir.get(net)[0]].append(net)
+                    top_level.append(net)
+                else:
+                    print(f"Error: {net}")
 
         for net, subnets in nets.items():
             networks[net.network.with_prefixlen] = {
                 'num': len(subnets),
-                'soruce': net.source,
+                'source': net.source,
                 'networks': subnets
             }
             networks[net.network.with_prefixlen].update(self.check_registrant(net))
         return networks, {net: self.networks.children(net) for net in top_level}
 
 
+def format_handles(data, reg_type):
+    registrant = ''
+    if reg_type in data:
+        for reg in data[reg_type]:
+            registrant += f"{reg.handle}: {reg.name}\n"
+    return registrant.rstrip('\n')
+
+
+def format_networks(nets, childs):
+    formatted, mapping = list(), list()
+    for net, data in nets.items():
+        formatted.append([net, data['source'], data['num'], format_handles(data, 'registrant'),
+                          format_handles(data, 'administrative')])
+        for n in data['networks']:
+            mapping.append([net, n])
+    irr_df = pd.DataFrame(formatted, columns=['Network', 'Source', 'IPF Networks', 'Registrant', 'Administrative'])
+    map_df = pd.DataFrame(mapping, columns=['IRR Network', 'IPF Network'])
+
+    tmp = list()
+    for n, c in childs.items():
+        for s in c:
+            tmp.append([n, s])
+    child_df = pd.DataFrame(tmp, columns=['IPF Network', 'IPF Subnets'])
+    return irr_df, map_df, child_df
+
+
 if __name__ == '__main__':
     test = IPFNets()
     networks, children = test.check_nets()
+    irr_df, map_df, child_df = format_networks(networks, children)
+    with pd.ExcelWriter('IPFabric_IRR_Report.xlsx', engine='xlsxwriter') as writer:
+        writer.book.formats[0].set_text_wrap()
+        irr_df.to_excel(writer, sheet_name='IRR Summary', index=False)
+        map_df.to_excel(writer, sheet_name='IPF Networks', index=False)
+        child_df.to_excel(writer, sheet_name='IPF Subnets', index=False)
 
-    print(json.dumps(networks, default=dict))
-    print(json.dumps(children))
+
+    # print(json.dumps(networks, default=dict))
+    # print(json.dumps(children))
 
     print()

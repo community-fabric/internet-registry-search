@@ -6,11 +6,14 @@ authors = ["Justin Jeffery <justin.jeffery@ipfabric.io>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7.1"
+python = "^3.8"
 pytricia = "^1.0.2"
 ipfabric = "^0.9.0"
 pydantic = "^1.9.0"
 whoisit = "^2.5.2"
+openpyxl = "^3.0.9"
+pandas = "^1.4.2"
+XlsxWriter = "^3.0.3"
 
 [tool.poetry.dev-dependencies]
 

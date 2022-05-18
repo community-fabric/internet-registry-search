@@ -33,7 +33,7 @@ class IPFNets:
             return True
 
     def load_networks(self):
-        ipf = IPFClient()
+        ipf = IPFClient(timeout=30)
         pyt = pytricia.PyTricia()
         for net in ipf.fetch_all('tables/networks', filters={"net": ["empty", False]}):
             network = IPv4Network(net['net'], strict=False)
@@ -74,7 +74,7 @@ class IPFNets:
         return dict(registrant=registrant, administrative=administrative)
 
     def check_nets(self):
-        networks, top_level = dict(), list()
+        networks, top_level, errors = dict(), list(), list()
         nets = defaultdict(list)
         for net in self.networks.keys():
             if not self.networks.parent(net):
@@ -83,6 +83,7 @@ class IPFNets:
                     top_level.append(net)
                 else:
                     print(f"Error: {net}")
+                    errors.append(net)
 
         for net, subnets in nets.items():
             networks[net.network.with_prefixlen] = {
@@ -91,7 +92,7 @@ class IPFNets:
                 'networks': subnets
             }
             networks[net.network.with_prefixlen].update(self.check_registrant(net))
-        return networks, {net: self.networks.children(net) for net in top_level}
+        return networks, {net: self.networks.children(net) for net in top_level}, errors
 
 
 def format_handles(data, reg_type):
@@ -122,14 +123,14 @@ def format_networks(nets, childs):
 
 if __name__ == '__main__':
     test = IPFNets()
-    networks, children = test.check_nets()
+    networks, children, errors = test.check_nets()
     irr_df, map_df, child_df = format_networks(networks, children)
     with pd.ExcelWriter('IPFabric_IRR_Report.xlsx', engine='xlsxwriter') as writer:
         writer.book.formats[0].set_text_wrap()
         irr_df.to_excel(writer, sheet_name='IRR Summary', index=False)
         map_df.to_excel(writer, sheet_name='IPF Networks', index=False)
         child_df.to_excel(writer, sheet_name='IPF Subnets', index=False)
-
+        pd.DataFrame(errors, columns=['IPF Network']).to_excel(writer, sheet_name='Errors', index=False)
 
     # print(json.dumps(networks, default=dict))
     # print(json.dumps(children))
